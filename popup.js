@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const status = document.getElementById('status');
     const createFoldersCheckbox = document.getElementById('createFoldersCheckbox');
     const thresholdInput = document.getElementById('thresholdInput');
+    const includeSubfoldersCheckbox = document.getElementById('includeSubfoldersCheckbox');
+    const organizeSubfoldersCheckbox = document.getElementById('organizeSubfoldersCheckbox');
 
     let selectedFolderId = null;
 
@@ -30,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (selectedFolderId) {
             status.textContent = "Organizing bookmarks...";
             chrome.bookmarks.getSubTree(selectedFolderId, function (bookmarkTreeNodes) {
-                organizeAndSortBookmarks(bookmarkTreeNodes[0].children);
+                organizeAndSortBookmarks(bookmarkTreeNodes[0].children, selectedFolderId);
             });
         } else {
             status.textContent = "Please select a folder to organize.";
@@ -78,12 +80,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function organizeAndSortBookmarks(bookmarks) {
+    function organizeAndSortBookmarks(bookmarks, parentId) {
         let urlMap = {};
+        let folderMap = {};
 
         bookmarks.forEach(function (bookmark) {
             if (bookmark.children && bookmark.children.length > 0) {
-                organizeAndSortBookmarks(bookmark.children);
+                if (includeSubfoldersCheckbox.checked) {
+                    organizeAndSortBookmarks(bookmark.children, bookmark.id);
+                }
+                folderMap[bookmark.id] = bookmark;
             } else if (bookmark.url) {
                 let domain = (new URL(bookmark.url)).hostname;
                 if (!urlMap[domain]) {
@@ -97,19 +103,29 @@ document.addEventListener('DOMContentLoaded', function () {
         let threshold = parseInt(thresholdInput.value) || 1;
 
         let index = 0;
-        sortedDomains.forEach(function (domain) {
-            let bookmarks = urlMap[domain];
-            bookmarks.sort((a, b) => a.title.localeCompare(b.title));
 
-            if (createFoldersCheckbox.checked && bookmarks.length >= threshold) {
-                chrome.bookmarks.create({ title: domain, parentId: selectedFolderId }, function (newFolder) {
-                    bookmarks.forEach(function (bookmark, i) {
+        Object.keys(folderMap).forEach(function (folderId) {
+            chrome.bookmarks.move(folderId, { parentId: parentId, index: index });
+            index++;
+        });
+
+        sortedDomains.forEach(function (domain) {
+            let domainBookmarks = urlMap[domain];
+            domainBookmarks.sort((a, b) => a.title.localeCompare(b.title));
+
+            if (createFoldersCheckbox.checked && domainBookmarks.length >= threshold) {
+                chrome.bookmarks.create({ title: domain, parentId: parentId }, function (newFolder) {
+                    domainBookmarks.forEach(function (bookmark, i) {
                         chrome.bookmarks.move(bookmark.id, { parentId: newFolder.id, index: i });
                     });
+
+                    if (organizeSubfoldersCheckbox.checked) {
+                        organizeAndSortBookmarks(domainBookmarks, newFolder.id);
+                    }
                 });
             } else {
-                bookmarks.forEach(function (bookmark) {
-                    chrome.bookmarks.move(bookmark.id, { parentId: selectedFolderId, index: index });
+                domainBookmarks.forEach(function (bookmark) {
+                    chrome.bookmarks.move(bookmark.id, { parentId: parentId, index: index });
                     index++;
                 });
             }
