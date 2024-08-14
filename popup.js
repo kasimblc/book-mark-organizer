@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const loadFoldersButton = document.getElementById('loadFoldersButton');
+    const reloadButton = document.getElementById('reloadButton');
     const organizeButton = document.getElementById('organizeButton');
     const folderSelect = document.getElementById('folderSelect');
     const searchBox = document.getElementById('searchBox');
@@ -10,20 +10,20 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedFolderId = null;
 
     // Load folders when the extension is opened
-    chrome.bookmarks.getTree(function (bookmarkTreeNodes) {
-        populateFolderSelect(bookmarkTreeNodes);
-        organizeButton.disabled = false;
-        searchBox.style.display = 'block';
-    });
-
-    loadFoldersButton.addEventListener('click', function () {
+    function loadFolders() {
         chrome.bookmarks.getTree(function (bookmarkTreeNodes) {
             populateFolderSelect(bookmarkTreeNodes);
         });
-    });
+    }
+
+    loadFolders();
+
+    reloadButton.addEventListener('click', loadFolders);
 
     folderSelect.addEventListener('change', function () {
         selectedFolderId = folderSelect.value;
+        document.getElementById('selectedFolder').textContent = `Selected Folder: ${folderSelect.options[folderSelect.selectedIndex].text}`;
+        organizeButton.disabled = !selectedFolderId; // Enable button only if a folder is selected
     });
 
     organizeButton.addEventListener('click', function () {
@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
             status.textContent = "Organizing bookmarks...";
             chrome.bookmarks.getSubTree(selectedFolderId, function (bookmarkTreeNodes) {
                 organizeAndSortBookmarks(bookmarkTreeNodes[0].children);
-                status.textContent = "Bookmarks organized and sorted successfully!";
             });
         } else {
             status.textContent = "Please select a folder to organize.";
@@ -115,5 +114,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
         });
+
+        status.textContent = "Bookmarks organized and sorted successfully!";
     }
 });
