@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Edge Bookmarks Organizer",
+  "version": "1.0",
+  "description": "Organizes bookmarks by grouping duplicates under the same folder.",
+  "permissions": ["bookmarks", "storage"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
+}
