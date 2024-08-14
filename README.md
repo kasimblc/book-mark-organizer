@@ -37,12 +37,12 @@ A Chrome Extension designed to help you organize your bookmarks more efficiently
 
 If you find any bugs or have suggestions for improvements, please feel free to open an issue or submit a pull request. Contributions are always welcome!
 
-## Screenshots
+## Screenshots - Before and After
 
 Here are some screenshots of the extension in action:
-
+Before:
 ![2](https://github.com/user-attachments/assets/acb6c49d-3ff2-4fa4-abfe-0da107018e8e)
-
+After:
 ![3](https://github.com/user-attachments/assets/c820fb86-1e7a-428b-9878-258b801db3b0)
 
 ## License
