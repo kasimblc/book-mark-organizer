@@ -32,7 +32,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (selectedFolderId) {
             status.textContent = "Organizing bookmarks...";
             chrome.bookmarks.getSubTree(selectedFolderId, function (bookmarkTreeNodes) {
-                organizeAndSortBookmarks(bookmarkTreeNodes[0].children, selectedFolderId);
+                if (includeSubfoldersCheckbox.checked) {
+                    includeAndOrganizeSubfolders(bookmarkTreeNodes[0]);
+                } else {
+                    organizeAndSortBookmarks(bookmarkTreeNodes[0].children, selectedFolderId);
+                }
             });
         } else {
             status.textContent = "Please select a folder to organize.";
@@ -80,15 +84,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function includeAndOrganizeSubfolders(bookmarkNode) {
+        // Include subfolder data by moving all bookmarks and subfolders to the selected folder
+        bookmarkNode.children.forEach(function (child) {
+            if (child.children && child.children.length > 0) {
+                child.children.forEach(function (subChild) {
+                    chrome.bookmarks.move(subChild.id, { parentId: selectedFolderId });
+                });
+            } else {
+                chrome.bookmarks.move(child.id, { parentId: selectedFolderId });
+            }
+        });
+        
+        organizeAndSortBookmarks(bookmarkNode.children, selectedFolderId);
+    }
+
     function organizeAndSortBookmarks(bookmarks, parentId) {
         let urlMap = {};
         let folderMap = {};
 
         bookmarks.forEach(function (bookmark) {
             if (bookmark.children && bookmark.children.length > 0) {
-                if (includeSubfoldersCheckbox.checked) {
-                    organizeAndSortBookmarks(bookmark.children, bookmark.id);
-                }
                 folderMap[bookmark.id] = bookmark;
             } else if (bookmark.url) {
                 let domain = (new URL(bookmark.url)).hostname;
@@ -106,6 +122,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         Object.keys(folderMap).forEach(function (folderId) {
             chrome.bookmarks.move(folderId, { parentId: parentId, index: index });
+            if (organizeSubfoldersCheckbox.checked) {
+                organizeAndSortBookmarks(folderMap[folderId].children, folderId);
+            }
             index++;
         });
 
@@ -118,10 +137,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     domainBookmarks.forEach(function (bookmark, i) {
                         chrome.bookmarks.move(bookmark.id, { parentId: newFolder.id, index: i });
                     });
-
-                    if (organizeSubfoldersCheckbox.checked) {
-                        organizeAndSortBookmarks(domainBookmarks, newFolder.id);
-                    }
                 });
             } else {
                 domainBookmarks.forEach(function (bookmark) {
